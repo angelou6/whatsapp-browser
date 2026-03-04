@@ -1,0 +1,22 @@
+{
+  "name": "whatsapp-browser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx tsc && node dist/index.js",
+    "build": "npx tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "@types/selenium-webdriver": "^4.35.5",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "selenium-webdriver": "^4.41.0"
+  }
+}
