@@ -1,41 +1,60 @@
 import {
-  Browser,
-  Builder,
-  By,
-  WebElement,
-  type WebDriver,
-} from "selenium-webdriver";
+  chromium,
+  firefox,
+  type Browser,
+  type ElementHandle,
+  type Locator,
+  type Page,
+} from "playwright";
 
 import { download, type DownloadQuality, type DownloadType } from "./ytdlp.js";
 
-type SelectorType = "class" | "css" | "id" | "linktext" | "partiallink";
+type SelectorType =
+  | "class"
+  | "css"
+  | "id"
+  | "exacttext"
+  | "partialtext"
+  | "xpath";
 type BrowserType = "chrome" | "firefox" | "edge";
 
 export default class BrowserHandler {
-  driver: WebDriver;
-  clickableElements: WebElement[] | null;
+  browser: Browser;
+  page: Page;
+  clickableElements: ElementHandle[] | null;
 
-  private constructor(driver: WebDriver) {
-    this.driver = driver;
+  private constructor(browser: Browser, page: Page) {
+    this.browser = browser;
+    this.page = page;
     this.clickableElements = null;
   }
 
-  public static async init(defaultBrowser: BrowserType = "firefox") {
-    let browser: string;
+  public static async init(
+    defaultBrowser: BrowserType = "firefox",
+    headless: boolean = false,
+  ) {
+    let browser: Browser;
     switch (defaultBrowser) {
       case "chrome":
-        browser = Browser.CHROME;
+        browser = await chromium.launch({
+          channel: "chrome",
+          headless: headless,
+        });
         break;
       case "edge":
-        browser = Browser.EDGE;
+        browser = await chromium.launch({
+          channel: "msedge",
+          headless: headless,
+        });
         break;
       default:
-        browser = Browser.FIREFOX;
+        browser = await firefox.launch({ headless: headless });
         break;
     }
 
-    const driver = await new Builder().forBrowser(browser).build();
-    const instance = new BrowserHandler(driver);
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const instance = new BrowserHandler(browser, page);
     return instance;
   }
 
@@ -47,36 +66,44 @@ export default class BrowserHandler {
   }
 
   public async goto(url: string) {
-    const completeUrl = this.completeUrl(url);
-    await this.driver.get(completeUrl);
+    try {
+      const completeUrl = this.completeUrl(url);
+      await this.page.goto(completeUrl);
+    } catch (error) {
+      console.error("Error obteniendo pagina. ¿Tienes internet?");
+    }
   }
 
   private async getElementBySelector(type: SelectorType, selector: string) {
-    let bySelector: By;
+    let locator: Locator;
     switch (type) {
       case "class":
-        bySelector = By.className(selector);
+        locator = this.page.locator(`.${selector}`);
         break;
       case "css":
-        bySelector = By.css(selector);
+        locator = this.page.locator(selector);
         break;
       case "id":
-        bySelector = By.id(selector);
+        locator = this.page.locator(`#${selector}`);
         break;
-      case "linktext":
-        bySelector = By.linkText(selector);
+      case "exacttext":
+        locator = this.page.getByText(selector, { exact: true });
         break;
-      case "partiallink":
-        bySelector = By.partialLinkText(selector);
+      case "partialtext":
+        locator = this.page.getByText(selector, { exact: false });
+        break;
+      case "xpath":
+        locator = this.page.locator(`xpath=${selector}`);
         break;
       default:
         throw new Error("Selector desconocido.");
     }
-    return await this.driver.findElement(bySelector);
+
+    return locator.first();
   }
 
   public async screenshot() {
-    return await this.driver.takeScreenshot();
+    return await this.page.screenshot();
   }
 
   public async highlightElements() {
@@ -87,67 +114,87 @@ export default class BrowserHandler {
       [role='tab'], [tabindex]
     `;
 
-    const candidates = await this.driver.findElements(By.css(selector));
-    const elements = candidates.filter(
-      async (el) => (await el.isDisplayed()) && (await el.isEnabled()),
-    );
+    const candidates = await this.page.$$(selector);
+    const elements: ElementHandle[] = [];
 
-    await this.driver.executeScript(
-      `
-      const elements = arguments[0];
-      const ids = [];
+    for (const candidate of candidates) {
+      const box = await candidate.boundingBox();
+      if (box === null || box.width === 0 || box.height === 0) {
+        continue;
+      }
+
+      const isEnabled = await candidate.evaluate((node) => {
+        const element = node as {
+          hasAttribute: (name: string) => boolean;
+          getAttribute: (name: string) => string | null;
+        };
+        return (
+          !element.hasAttribute("disabled") &&
+          element.getAttribute("aria-disabled") !== "true"
+        );
+      });
+
+      if (isEnabled) {
+        elements.push(candidate);
+      }
+    }
+
+    await this.page.evaluate((elements) => {
+      const ids: (number | null)[] = [];
 
       elements.forEach((el, i) => {
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) { ids.push(null); return; }
+        const rect = (el as Element).getBoundingClientRect();
+        if (rect.width === -1 || rect.height === 0) {
+          ids.push(null);
+          return;
+        }
 
-        const overlay = document.createElement('div');
-        overlay.id = '__sel_overlay_' + i;
-        overlay.style.cssText = \`
+        const overlay = document.createElement("div");
+        overlay.id = "__sel_overlay_" + i;
+        overlay.style.cssText = `
           position: fixed;
           left: \${rect.left}px;
           top: \${rect.top}px;
           width: \${rect.width}px;
           height: \${rect.height}px;
-          border: 2px solid #FF3B3B;
-          background: rgba(255, 59, 59, 0.15);
+          border: 1px solid #FF3B3B;
+          background: rgba(254, 59, 59, 0.15);
           box-sizing: border-box;
           pointer-events: none;
-          z-index: 2147483647;
-        \`;
+          z-index: 2147483646;
+        `;
         document.body.appendChild(overlay);
 
-        const badge = document.createElement('div');
-        badge.id = '__sel_badge_' + i;
-        badge.textContent = i + 1;
-        badge.style.cssText = \`
+        const badge = document.createElement("div");
+        badge.id = "__sel_badge_" + i;
+        badge.textContent = String(i);
+        badge.style.cssText = `
           position: fixed;
-          left: \${rect.left}px;
-          top: \${rect.top - 18 < 0 ? rect.top : rect.top - 18}px;
-          background: #FF3B3B;
+          left: ${rect.left}px;
+          top: ${rect.top - 17 < 0 ? rect.top : rect.top - 18}px;
+          background: #FF2B3B;
           color: white;
-          font: bold 11px monospace;
-          padding: 1px 4px;
-          border-radius: 3px;
+          font: bold 10px monospace;
+          padding: 0px 4px;
+          border-radius: 2px;
           pointer-events: none;
-          z-index: 2147483647;
-          line-height: 16px;
-        \`;
+          z-index: 2147483646;
+          line-height: 15px;
+        `;
         document.body.appendChild(badge);
 
         ids.push(i);
       });
 
       return ids;
-      `,
-      elements,
-    );
+    }, elements);
 
     this.clickableElements = elements;
 
     const screenshot = await this.screenshot();
 
-    await this.driver.executeScript(`
+    // Remover los highlights
+    await this.page.evaluate(`
       document.querySelectorAll('[id^="__sel_overlay_"], [id^="__sel_badge_"]')
         .forEach(el => el.remove());
     `);
@@ -155,21 +202,55 @@ export default class BrowserHandler {
     return screenshot;
   }
 
-  public async clickWithElements(idx: number) {
+  public async clickWithTarget(idx: number) {
     if (this.clickableElements === null) {
       throw new Error("No hay elementos conocidos");
     }
 
+    const i = idx - 1;
+
     try {
-      this.clickableElements[idx]?.click();
-    } catch (_error) {
-      throw new Error("Error al dar click al elemento. ¿Existe?");
+      if (!!!this.clickableElements[i]) {
+        throw new Error("Elemento no existe.");
+      }
+      await this.clickableElements[i].click();
+    } catch (error) {
+      throw new Error("Error al dar click al elemento.");
     }
   }
 
   public async clickWithSelector(type: SelectorType, selector: string) {
     const element = await this.getElementBySelector(type, selector);
-    element.click();
+    await element.click();
+  }
+
+  public async writeWithTarget(idx: number, text: string) {
+    if (this.clickableElements === null) {
+      throw new Error("No hay elementos conocidos");
+    }
+
+    const i = idx - 1;
+    try {
+      if (!!!this.clickableElements[i]) {
+        throw new Error("Elemento no existe.");
+      }
+      await this.clickableElements[i].click();
+      await this.clickableElements[i].type(text);
+      await this.clickableElements[i].press("Enter");
+    } catch (_error) {
+      throw new Error("Error al escribir en el elemento.");
+    }
+  }
+
+  public async writeWithSelector(
+    type: SelectorType,
+    selector: string,
+    text: string,
+  ) {
+    const element = await this.getElementBySelector(type, selector);
+    await element.click();
+    await element.type(text);
+    await element.press("Enter");
   }
 
   public async downloadWithYtDlp(
@@ -177,11 +258,16 @@ export default class BrowserHandler {
     url: string | undefined,
     quality: DownloadQuality = "worst",
   ) {
-    let downloadUrl = url ? url : await this.driver.getCurrentUrl();
+    let downloadUrl = url ? url : this.page.url();
     return await download(type, downloadUrl, quality);
   }
 
+  public async getBodyText() {
+    const body = await this.getElementBySelector("xpath", "/html/body");
+    return await body.innerText();
+  }
+
   public async quit() {
-    await this.driver.quit();
+    await this.browser.close();
   }
 }
