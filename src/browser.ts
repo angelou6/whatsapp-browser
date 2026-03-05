@@ -6,7 +6,6 @@ import {
   type Locator,
   type Page,
 } from "playwright";
-
 import { download, type DownloadQuality, type DownloadType } from "./ytdlp.js";
 
 type SelectorType =
@@ -19,9 +18,9 @@ type SelectorType =
 type BrowserType = "chrome" | "firefox" | "edge";
 
 export default class BrowserHandler {
-  browser: Browser;
-  page: Page;
-  clickableElements: ElementHandle[] | null;
+  private browser: Browser;
+  private page: Page;
+  private clickableElements: ElementHandle[] | null;
 
   private constructor(browser: Browser, page: Page) {
     this.browser = browser;
@@ -153,10 +152,10 @@ export default class BrowserHandler {
         overlay.id = "__sel_overlay_" + i;
         overlay.style.cssText = `
           position: fixed;
-          left: \${rect.left}px;
-          top: \${rect.top}px;
-          width: \${rect.width}px;
-          height: \${rect.height}px;
+          left: ${rect.left}px;
+          top: ${rect.top}px;
+          width: ${rect.width}px;
+          height: ${rect.height}px;
           border: 1px solid #FF3B3B;
           background: rgba(254, 59, 59, 0.15);
           box-sizing: border-box;
@@ -240,6 +239,14 @@ export default class BrowserHandler {
     } catch (_error) {
       throw new Error("Error al escribir en el elemento.");
     }
+  }
+
+  public async pageup() {
+    await this.page.keyboard.press("PageUp");
+  }
+
+  public async pagedown() {
+    await this.page.keyboard.press("PageDown");
   }
 
   public async writeWithSelector(
