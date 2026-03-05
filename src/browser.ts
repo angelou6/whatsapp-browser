@@ -30,7 +30,7 @@ export default class BrowserHandler {
 
   public static async init(
     defaultBrowser: BrowserType = "firefox",
-    headless: boolean = false,
+    headless: boolean = true,
   ) {
     let browser: Browser;
     switch (defaultBrowser) {
