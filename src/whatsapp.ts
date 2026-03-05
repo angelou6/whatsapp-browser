@@ -55,7 +55,7 @@ export async function connect() {
       if (connection === "open") {
         console.log("Conectado a WhatsApp.");
         if (!browser) {
-          console.log("Iniciando browser...");
+          console.log("Iniciando navegador...");
           browser = await BrowserHandler.init();
           console.log("Navegador listo.");
         }

@@ -16,11 +16,19 @@ export async function handleBrowserCommand(
   const args = parts.slice(1);
 
   switch (cmd) {
-    case "goto": {
+    case "go": {
       const url = args[0];
-      if (!url) return [{ type: "text", text: "Uso: goto <url>" }];
+      if (!url) return [{ type: "text", text: "Uso: go <url>" }];
       await browser.goto(url);
       const ssGoto = await browser.screenshot();
+      return [{ type: "image", image: Buffer.from(ssGoto) }];
+    }
+
+    case "goh": {
+      const url = args[0];
+      if (!url) return [{ type: "text", text: "Uso: go <url>" }];
+      await browser.goto(url);
+      const ssGoto = await browser.highlightElements();
       return [{ type: "image", image: Buffer.from(ssGoto) }];
     }
 
@@ -29,7 +37,8 @@ export async function handleBrowserCommand(
       return [{ type: "image", image: Buffer.from(image) }];
     }
 
-    case "highlight": {
+    case "highlight":
+    case "hg": {
       const image = await browser.highlightElements();
       return [{ type: "image", image: Buffer.from(image) }];
     }
@@ -140,9 +149,10 @@ export async function handleBrowserCommand(
           type: "text",
           text: [
             "*Comandos disponibles:*",
-            "goto <url> - Navegar a URL",
+            "go <url> - Navegar a URL",
+            "goh <url> - Navegar a URL y resalta los elementos",
             "screenshot - Captura de pantalla",
-            "highlight - Resaltar elementos",
+            "highlight | hg - Resaltar elementos",
             "click <n> - Click en elemento n",
             "write <n> <texto> - Escribir en elemento n",
             "pageup - Scroll arriba",
