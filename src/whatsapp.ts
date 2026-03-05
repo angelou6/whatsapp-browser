@@ -118,7 +118,6 @@ export async function connect() {
               case "image":
                 await sock.sendMessage(jid, {
                   image: result.image,
-                  caption: "Screenshot",
                 });
                 break;
               case "document": {

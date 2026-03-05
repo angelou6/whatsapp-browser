@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { readdirSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -39,7 +40,8 @@ export async function download(
   const downloadDir = join(tmpdir(), "whatsapp-browser-downloads");
   await mkdir(downloadDir, { recursive: true });
 
-  const args = ["-P", downloadDir, "-o", "%(title)s.%(ext)s"];
+  const files = readdirSync(downloadDir);
+  const args = ["-P", downloadDir, "-o", `video(${files.length}).%(ext)s`];
 
   if (type === "audio") {
     args.push(

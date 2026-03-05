@@ -68,6 +68,7 @@ export default class BrowserHandler {
     try {
       const completeUrl = this.completeUrl(url);
       await this.page.goto(completeUrl);
+      this.clickableElements = [];
     } catch (error) {
       console.error("Error obteniendo pagina. ¿Tienes internet?");
     }
@@ -166,7 +167,7 @@ export default class BrowserHandler {
 
         const badge = document.createElement("div");
         badge.id = "__sel_badge_" + i;
-        badge.textContent = String(i);
+        badge.textContent = String(i + 1);
         badge.style.cssText = `
           position: fixed;
           left: ${rect.left}px;
@@ -213,6 +214,8 @@ export default class BrowserHandler {
         throw new Error("Elemento no existe.");
       }
       await this.clickableElements[i].click();
+      await this.page.waitForTimeout(2000);
+      this.clickableElements = [];
     } catch (error) {
       throw new Error("Error al dar click al elemento.");
     }
@@ -236,6 +239,8 @@ export default class BrowserHandler {
       await this.clickableElements[i].click();
       await this.clickableElements[i].type(text);
       await this.clickableElements[i].press("Enter");
+      await this.page.waitForTimeout(2000);
+      this.clickableElements = [];
     } catch (_error) {
       throw new Error("Error al escribir en el elemento.");
     }
@@ -265,8 +270,9 @@ export default class BrowserHandler {
     url: string | undefined,
     quality: DownloadQuality = "worst",
   ) {
-    let downloadUrl = url ? url : this.page.url();
-    return await download(type, downloadUrl, quality);
+    const downloadUrl = url ? url : this.page.url();
+    const filePath = await download(type, downloadUrl, quality);
+    return filePath;
   }
 
   public async getBodyText() {

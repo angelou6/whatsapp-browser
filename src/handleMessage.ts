@@ -72,9 +72,48 @@ export async function handleBrowserCommand(
     }
 
     case "download": {
-      const dlType = (args[0] as DownloadType) || "video";
-      const dlUrl = args[1] || undefined;
-      const dlQuality = (args[2] as DownloadQuality) || "worst";
+      const isType = (value: string | undefined): value is DownloadType =>
+        value === "video" || value === "audio";
+      const isQuality = (value: string | undefined): value is DownloadQuality =>
+        value === "worst" || value === "normal" || value === "best";
+
+      let dlType: DownloadType = "video";
+      let dlQuality: DownloadQuality = "worst";
+      let dlUrl: string | undefined;
+      let i = 0;
+
+      const maybeType = args[i];
+      if (isType(maybeType)) {
+        dlType = maybeType;
+        i++;
+      }
+
+      const maybeQuality = args[i];
+      if (isQuality(maybeQuality)) {
+        dlQuality = maybeQuality;
+        i++;
+      }
+
+      if (args[i]?.startsWith("http")) {
+        dlUrl = args[i];
+        i++;
+      }
+
+      const maybeQualityAfterUrl = args[i];
+      if (isQuality(maybeQualityAfterUrl)) {
+        dlQuality = maybeQualityAfterUrl;
+        i++;
+      }
+
+      if (args[i]) {
+        return [
+          {
+            type: "text",
+            text: "Uso: download [video|audio] [worst|normal|best] [url]",
+          },
+        ];
+      }
+
       const filePath = await browser.downloadWithYtDlp(
         dlType,
         dlUrl,
@@ -84,6 +123,15 @@ export async function handleBrowserCommand(
       const mime = dlType === "audio" ? "audio/mpeg" : "video/mp4";
       const fileName = filePath.split(/[/\\]/).pop() || `download.${ext}`;
       return [{ type: "document", path: filePath, mimetype: mime, fileName }];
+    }
+
+    case "ping": {
+      return [
+        {
+          type: "text",
+          text: "pong!",
+        },
+      ];
     }
 
     case "help": {
@@ -100,7 +148,7 @@ export async function handleBrowserCommand(
             "pageup - Scroll arriba",
             "pagedown - Scroll abajo",
             "text - Texto de la pagina",
-            "download [video|audio] [url] [worst|normal|best]",
+            "download [video|audio] [worst|normal|best] [url]",
           ].join("\n"),
         },
       ];
