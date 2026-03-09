@@ -64,14 +64,14 @@ export default class BrowserHandler {
     return url;
   }
 
+  public async reload() {
+    await this.page.reload();
+  }
+
   public async goto(url: string) {
-    try {
-      const completeUrl = this.completeUrl(url);
-      await this.page.goto(completeUrl);
-      this.clickableElements = [];
-    } catch (error) {
-      console.error("Error obteniendo pagina. ¿Tienes internet?");
-    }
+    const completeUrl = this.completeUrl(url);
+    await this.page.goto(completeUrl);
+    this.clickableElements = [];
   }
 
   private async getElementBySelector(type: SelectorType, selector: string) {

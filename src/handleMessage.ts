@@ -19,17 +19,63 @@ export async function handleBrowserCommand(
     case "go": {
       const url = args[0];
       if (!url) return [{ type: "text", text: "Uso: go <url>" }];
-      await browser.goto(url);
-      const ssGoto = await browser.screenshot();
-      return [{ type: "image", image: Buffer.from(ssGoto) }];
+      try {
+        await browser.goto(url);
+        const ssGoto = await browser.screenshot();
+        return [{ type: "image", image: Buffer.from(ssGoto) }];
+      } catch (error) {
+        console.error("Error navegando a la URL", error);
+        return [
+          {
+            type: "text",
+            text: "Error navegando a la URL. ¿Es válida?",
+          },
+        ];
+      }
     }
 
     case "goh": {
       const url = args[0];
       if (!url) return [{ type: "text", text: "Uso: go <url>" }];
-      await browser.goto(url);
-      const ssGoto = await browser.highlightElements();
-      return [{ type: "image", image: Buffer.from(ssGoto) }];
+      try {
+        await browser.goto(url);
+        const ssGoto = await browser.highlightElements();
+        return [{ type: "image", image: Buffer.from(ssGoto) }];
+      } catch (error) {
+        console.error("Error navegando a la URL", error);
+        return [
+          {
+            type: "text",
+            text: "Error navegando a la URL. ¿Es válida?",
+          },
+        ];
+      }
+    }
+
+    case "google": {
+      const query = args.join(" ");
+      if (!query) return [{ type: "text", text: "Uso: google <consulta>" }];
+      await browser.goto(
+        `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+      );
+      const ssGoogle = await browser.screenshot();
+      return [{ type: "image", image: Buffer.from(ssGoogle) }];
+    }
+
+    case "duck": {
+      const query = args.join(" ");
+      if (!query) return [{ type: "text", text: "Uso: duck <consulta>" }];
+      await browser.goto(
+        `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
+      );
+      const ssDuck = await browser.screenshot();
+      return [{ type: "image", image: Buffer.from(ssDuck) }];
+    }
+
+    case "reload": {
+      await browser.reload();
+      const ssRefresh = await browser.screenshot();
+      return [{ type: "image", image: Buffer.from(ssRefresh) }];
     }
 
     case "screenshot": {
@@ -151,6 +197,9 @@ export async function handleBrowserCommand(
             "*Comandos disponibles:*",
             "go <url> - Navegar a URL",
             "goh <url> - Navegar a URL y resalta los elementos",
+            "reload - Refrescar la pagina",
+            "google <query> - Buscar en Google",
+            "duck <query> - Buscar en DuckDuckGo",
             "screenshot - Captura de pantalla",
             "highlight | hg - Resaltar elementos",
             "click <n> - Click en elemento n",
