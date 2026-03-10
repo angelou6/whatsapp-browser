@@ -2,7 +2,8 @@
 
 Navega por el internet usando Whatsapp para aprovechar los datos gratis para redes sociales.
 
-El bot necesita una cuenta de Whatsapp propia para funcionar.
+> [!NOTE]
+> El bot necesita una cuenta de Whatsapp propia para funcionar.
 
 > [!WARNING]
 > El bot asume que solo una persona lo está usando a la vez.
