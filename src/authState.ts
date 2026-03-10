@@ -3,9 +3,11 @@ import {
   initAuthCreds,
   makeCacheableSignalKeyStore,
 } from "baileys";
+import { mkdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
 export function useAuthState() {
+  mkdirSync("./auth", { recursive: true });
   const db = new DatabaseSync("./auth/auth.db");
 
   db.exec(`PRAGMA journal_mode = WAL`);
