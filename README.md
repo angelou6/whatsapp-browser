@@ -25,17 +25,18 @@ $ npm run start
 
 ## Ayuda
 ```
-go <url> - Navegar a URL
-goh <url> - Navegar a URL y resalta los elementos
+go h? <url> - Navegar a URL
+back - Volver a la pagina anterior
+forward - Ir a la pagina siguiente
+google h? <query> - Buscar en Google
+duck h? <query> - Buscar en DuckDuckGo
 reload - Refrescar la pagina
-google <query> - Buscar en Google
-duck <query> - Buscar en DuckDuckGo
 screenshot - Captura de pantalla
 highlight | hg - Resaltar elementos
 click <n> - Click en elemento n
 write <n> <texto> - Escribir en elemento n
-pageup - Scroll arriba
-pagedown - Scroll abajo
+scroll [up|down] <cantidad> - Scroll hacia arriba o abajo
 text - Texto de la pagina
-download [video|audio] [worst|normal|best] [url]
+download [video|audio]? [worst|normal|best]? [url]
+help - Mostrar este mensaje
 ```

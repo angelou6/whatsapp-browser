@@ -74,6 +74,14 @@ export default class BrowserHandler {
     this.clickableElements = [];
   }
 
+  public async goBack() {
+    await this.page.goBack();
+  }
+
+  public async goForward() {
+    await this.page.goForward();
+  }
+
   private async getElementBySelector(type: SelectorType, selector: string) {
     let locator: Locator;
     switch (type) {
@@ -108,13 +116,14 @@ export default class BrowserHandler {
 
   public async highlightElements() {
     const selector = `
-      a, button, input, select, textarea, 
-      [onclick], [role='button'], [role='link'], 
-      [role='checkbox'], [role='radio'], [role='menuitem'], 
+      a, button, input, select, textarea,
+      [onclick], [role='button'], [role='link'],
+      [role='checkbox'], [role='radio'], [role='menuitem'],
       [role='tab'], [tabindex]
     `;
 
-    const candidates = await this.page.$$(selector);
+    const selected = await this.page.$$(selector);
+    const candidates = selected.filter((el) => el.isVisible());
     const elements: ElementHandle[] = [];
 
     for (const candidate of candidates) {
@@ -246,12 +255,13 @@ export default class BrowserHandler {
     }
   }
 
-  public async pageup() {
-    await this.page.keyboard.press("PageUp");
+  public async scroll(direction: "up" | "down", amount: number) {
+    await this.page.mouse.wheel(0, direction === "up" ? -amount : amount);
   }
 
-  public async pagedown() {
-    await this.page.keyboard.press("PageDown");
+  public async topdf() {
+    const pdfBuffer = await this.page.pdf();
+    return pdfBuffer;
   }
 
   public async writeWithSelector(

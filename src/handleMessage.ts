@@ -6,6 +6,21 @@ export type MessageResult =
   | { type: "image"; image: Buffer }
   | { type: "document"; path: string; mimetype: string; fileName: string };
 
+async function search(
+  browser: BrowserHandler,
+  url: string,
+  query: string,
+  highlight: boolean,
+): Promise<MessageResult[]> {
+  await browser.goto(`${url}?q=${encodeURIComponent(query)}`);
+  if (highlight) {
+    const ssHighlight = await browser.highlightElements();
+    return [{ type: "image", image: Buffer.from(ssHighlight) }];
+  }
+  const ssGoogle = await browser.screenshot();
+  return [{ type: "image", image: Buffer.from(ssGoogle) }];
+}
+
 export async function handleBrowserCommand(
   browser: BrowserHandler,
   text: string,
@@ -18,9 +33,15 @@ export async function handleBrowserCommand(
   switch (cmd) {
     case "go": {
       const url = args[0];
+      const highlight = args[0] === "h" || args[0] === "highlight";
+
       if (!url) return [{ type: "text", text: "Uso: go <url>" }];
       try {
         await browser.goto(url);
+        if (highlight) {
+          const ssHighlight = await browser.highlightElements();
+          return [{ type: "image", image: Buffer.from(ssHighlight) }];
+        }
         const ssGoto = await browser.screenshot();
         return [{ type: "image", image: Buffer.from(ssGoto) }];
       } catch (error) {
@@ -34,42 +55,35 @@ export async function handleBrowserCommand(
       }
     }
 
-    case "goh": {
-      const url = args[0];
-      if (!url) return [{ type: "text", text: "Uso: go <url>" }];
-      try {
-        await browser.goto(url);
-        const ssGoto = await browser.highlightElements();
-        return [{ type: "image", image: Buffer.from(ssGoto) }];
-      } catch (error) {
-        console.error("Error navegando a la URL", error);
-        return [
-          {
-            type: "text",
-            text: "Error navegando a la URL. ¿Es válida?",
-          },
-        ];
-      }
+    case "back": {
+      await browser.goBack();
+      const ssBack = await browser.screenshot();
+      return [{ type: "image", image: Buffer.from(ssBack) }];
+    }
+
+    case "forward": {
+      await browser.goForward();
+      const ssForward = await browser.screenshot();
+      return [{ type: "image", image: Buffer.from(ssForward) }];
     }
 
     case "google": {
       const query = args.join(" ");
+      const highlight = args[0] === "h" || args[0] === "highlight";
       if (!query) return [{ type: "text", text: "Uso: google <consulta>" }];
-      await browser.goto(
-        `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+      return await search(
+        browser,
+        "https://www.google.com/search",
+        query,
+        highlight,
       );
-      const ssGoogle = await browser.screenshot();
-      return [{ type: "image", image: Buffer.from(ssGoogle) }];
     }
 
     case "duck": {
       const query = args.join(" ");
+      const highlight = args[0] === "h" || args[0] === "highlight";
       if (!query) return [{ type: "text", text: "Uso: duck <consulta>" }];
-      await browser.goto(
-        `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
-      );
-      const ssDuck = await browser.screenshot();
-      return [{ type: "image", image: Buffer.from(ssDuck) }];
+      return await search(browser, "https://duckduckgo.com/", query, highlight);
     }
 
     case "reload": {
@@ -107,16 +121,14 @@ export async function handleBrowserCommand(
       return [{ type: "image", image: Buffer.from(ssWrite) }];
     }
 
-    case "pageup": {
-      await browser.pageup();
-      const ssPu = await browser.screenshot();
-      return [{ type: "image", image: Buffer.from(ssPu) }];
-    }
-
-    case "pagedown": {
-      await browser.pagedown();
-      const ssPd = await browser.screenshot();
-      return [{ type: "image", image: Buffer.from(ssPd) }];
+    case "scroll": {
+      const direction = args[0] === "up" ? "up" : "down";
+      const amount = parseInt(args[1] ?? "100");
+      if (isNaN(amount))
+        return [{ type: "text", text: "Uso: scroll up|down <cantidad>" }];
+      await browser.scroll(direction, amount);
+      const ssScroll = await browser.screenshot();
+      return [{ type: "image", image: Buffer.from(ssScroll) }];
     }
 
     case "text": {
@@ -195,19 +207,20 @@ export async function handleBrowserCommand(
           type: "text",
           text: [
             "*Comandos disponibles:*",
-            "go <url> - Navegar a URL",
-            "goh <url> - Navegar a URL y resalta los elementos",
+            "go h? <url> - Navegar a URL",
+            "back - Volver a la pagina anterior",
+            "forward - Ir a la pagina siguiente",
+            "google h? <query> - Buscar en Google",
+            "duck h? <query> - Buscar en DuckDuckGo",
             "reload - Refrescar la pagina",
-            "google <query> - Buscar en Google",
-            "duck <query> - Buscar en DuckDuckGo",
             "screenshot - Captura de pantalla",
             "highlight | hg - Resaltar elementos",
             "click <n> - Click en elemento n",
             "write <n> <texto> - Escribir en elemento n",
-            "pageup - Scroll arriba",
-            "pagedown - Scroll abajo",
+            "scroll [up|down] <cantidad> - Scroll hacia arriba o abajo",
             "text - Texto de la pagina",
-            "download [video|audio] [worst|normal|best] [url]",
+            "download [video|audio]? [worst|normal|best]? [url]",
+            "help - Mostrar este mensaje",
           ].join("\n"),
         },
       ];
