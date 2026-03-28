@@ -6,7 +6,7 @@ import { readFile } from "node:fs/promises";
 import P from "pino";
 import QRCode from "qrcode";
 import { clearAuthState, useAuthState } from "./authState.js";
-import BrowserHandler from "./browser.js";
+import BrowserHandler from "../browser.js";
 import { handleBrowserCommand } from "./handleMessage.js";
 
 export async function connect() {

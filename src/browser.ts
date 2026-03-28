@@ -1,21 +1,10 @@
 import {
   chromium,
-  firefox,
   type Browser,
   type ElementHandle,
-  type Locator,
   type Page,
 } from "playwright";
 import { download, type DownloadQuality, type DownloadType } from "./ytdlp.js";
-
-type SelectorType =
-  | "class"
-  | "css"
-  | "id"
-  | "exacttext"
-  | "partialtext"
-  | "xpath";
-type BrowserType = "chrome" | "firefox" | "edge";
 
 export default class BrowserHandler {
   private browser: Browser;
@@ -28,28 +17,11 @@ export default class BrowserHandler {
     this.clickableElements = null;
   }
 
-  public static async init(
-    defaultBrowser: BrowserType = "firefox",
-    headless: boolean = true,
-  ) {
-    let browser: Browser;
-    switch (defaultBrowser) {
-      case "chrome":
-        browser = await chromium.launch({
-          channel: "chrome",
-          headless: headless,
-        });
-        break;
-      case "edge":
-        browser = await chromium.launch({
-          channel: "msedge",
-          headless: headless,
-        });
-        break;
-      default:
-        browser = await firefox.launch({ headless: headless });
-        break;
-    }
+  public static async init(headless: boolean = true) {
+    let browser = await chromium.launch({
+      channel: "chromium",
+      headless: headless,
+    });
 
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -82,34 +54,6 @@ export default class BrowserHandler {
     await this.page.goForward();
   }
 
-  private async getElementBySelector(type: SelectorType, selector: string) {
-    let locator: Locator;
-    switch (type) {
-      case "class":
-        locator = this.page.locator(`.${selector}`);
-        break;
-      case "css":
-        locator = this.page.locator(selector);
-        break;
-      case "id":
-        locator = this.page.locator(`#${selector}`);
-        break;
-      case "exacttext":
-        locator = this.page.getByText(selector, { exact: true });
-        break;
-      case "partialtext":
-        locator = this.page.getByText(selector, { exact: false });
-        break;
-      case "xpath":
-        locator = this.page.locator(`xpath=${selector}`);
-        break;
-      default:
-        throw new Error("Selector desconocido.");
-    }
-
-    return locator.first();
-  }
-
   public async screenshot() {
     return await this.page.screenshot();
   }
@@ -123,16 +67,12 @@ export default class BrowserHandler {
     `;
 
     const selected = await this.page.$$(selector);
-    const candidates = selected.filter((el) => el.isVisible());
-    const elements: ElementHandle[] = [];
-
-    for (const candidate of candidates) {
-      const box = await candidate.boundingBox();
+    const elements = selected.filter(async (el) => {
+      const box = await el.boundingBox();
       if (box === null || box.width === 0 || box.height === 0) {
-        continue;
+        return false;
       }
-
-      const isEnabled = await candidate.evaluate((node) => {
+      const isEnabled = await el.evaluate((node) => {
         const element = node as {
           hasAttribute: (name: string) => boolean;
           getAttribute: (name: string) => string | null;
@@ -143,11 +83,10 @@ export default class BrowserHandler {
         );
       });
 
-      if (isEnabled) {
-        elements.push(candidate);
-      }
-    }
+      return (await el.isVisible()) && isEnabled;
+    });
 
+    // Agregar highlights
     await this.page.evaluate((elements) => {
       const ids: (number | null)[] = [];
 
@@ -230,11 +169,6 @@ export default class BrowserHandler {
     }
   }
 
-  public async clickWithSelector(type: SelectorType, selector: string) {
-    const element = await this.getElementBySelector(type, selector);
-    await element.click();
-  }
-
   public async writeWithTarget(idx: number, text: string) {
     if (this.clickableElements === null) {
       throw new Error("No hay elementos conocidos");
@@ -264,17 +198,6 @@ export default class BrowserHandler {
     return pdfBuffer;
   }
 
-  public async writeWithSelector(
-    type: SelectorType,
-    selector: string,
-    text: string,
-  ) {
-    const element = await this.getElementBySelector(type, selector);
-    await element.click();
-    await element.type(text);
-    await element.press("Enter");
-  }
-
   public async downloadWithYtDlp(
     type: DownloadType = "video",
     url: string | undefined,
@@ -286,8 +209,7 @@ export default class BrowserHandler {
   }
 
   public async getBodyText() {
-    const body = await this.getElementBySelector("xpath", "/html/body");
-    return await body.innerText();
+    return await this.page.locator("body").innerText();
   }
 
   public async quit() {

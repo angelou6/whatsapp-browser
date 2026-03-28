@@ -12,14 +12,9 @@ Navega por el internet usando Whatsapp para aprovechar los datos gratis para red
 - Node 20+
 - yt-dlp - opcional
 
-## Como installar
-```
-$ npm install
-$ npx playwright install --with-deps
-```
-
 ## Como utilizar
 ```
+$ npm setup
 $ npm run start
 ```
 

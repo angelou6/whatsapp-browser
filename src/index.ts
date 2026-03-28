@@ -1,3 +1,3 @@
-import { connect } from "./whatsapp.js";
+import { connect } from "./whatsapp/whatsapp.js";
 
 await connect();

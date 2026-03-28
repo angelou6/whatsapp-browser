@@ -1,5 +1,5 @@
-import type BrowserHandler from "./browser.js";
-import type { DownloadQuality, DownloadType } from "./ytdlp.js";
+import type BrowserHandler from "../browser.js";
+import type { DownloadQuality, DownloadType } from "../ytdlp.js";
 
 export type MessageResult =
   | { type: "text"; text: string }
